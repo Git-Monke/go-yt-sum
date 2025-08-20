@@ -3,3 +3,8 @@ content
 sse.log
 go-yt-sum
 go-yt-sum-req
+.npm-cache
+.serena
+.claude
+.env
+.serena

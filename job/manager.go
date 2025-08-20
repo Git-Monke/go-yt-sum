@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
+	"go-yt-sum/db"
 	"log"
 	"net/http"
 	"sync"
@@ -16,15 +17,17 @@ type Client struct {
 type ActiveJobsManager struct {
 	Jobs    map[string]*SummaryJob
 	Clients map[string]*Client
+	DB      *db.DB
 
 	Lock        sync.RWMutex
 	ClientsLock sync.Mutex
 }
 
-func NewJobManager() *ActiveJobsManager {
+func NewJobManager(db *db.DB) *ActiveJobsManager {
 	return &ActiveJobsManager{
 		Jobs:    make(map[string]*SummaryJob),
 		Clients: make(map[string]*Client),
+		DB:      db,
 	}
 }
 
@@ -60,7 +63,7 @@ func (manager *ActiveJobsManager) DeleteClient(id string) {
 }
 
 func (manager *ActiveJobsManager) BroadcastJobData(job *SummaryJob, eventType string) {
-	jsonString, err := json.MarshalIndent(job, "", "  ")
+	jsonString, err := json.Marshal(job)
 
 	if err != nil {
 		log.Printf("Failed to encode update for job %s", job.VideoID)
@@ -82,6 +85,9 @@ func (manager *ActiveJobsManager) CreateJob(videoID string) (bool, *SummaryJob) 
 		return true, job
 	}
 
+	// Reset database failure state when creating/retrying a job
+	manager.DB.UpdateJobSuccess(videoID)
+
 	newJob := &SummaryJob{
 		VideoID:  videoID,
 		Status:   "pending",
@@ -98,20 +104,25 @@ func (manager *ActiveJobsManager) CreateJob(videoID string) (bool, *SummaryJob) 
 func (manager *ActiveJobsManager) CreateUpdateHandler() func(job *SummaryJob) {
 	return func(job *SummaryJob) {
 		manager.BroadcastJobData(job, "update")
+
+		// If the videoMeta gets created and we don't already have it, snag it and save it
+		if !manager.DB.Exists(job.VideoID) && job.Progress.VideoMeta != nil {
+			manager.DB.Create(job.VideoID, *job.Progress.VideoMeta)
+		}
 	}
 }
 
-func (manager *ActiveJobsManager) GetJob(videoID string) (bool, *SummaryJob) {
+func (manager *ActiveJobsManager) GetJob(videoID string) *SummaryJob {
 	manager.Lock.Lock()
 	defer manager.Lock.Unlock()
 
 	_, exists := manager.Jobs[videoID]
 
 	if exists {
-		return true, manager.Jobs[videoID]
+		return manager.Jobs[videoID]
 	}
 
-	return false, nil
+	return nil
 }
 
 func (manager *ActiveJobsManager) GetAllJobs() map[string]*SummaryJob {

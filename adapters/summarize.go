@@ -42,13 +42,14 @@ type GroqSummarizationResponse struct {
 
 // ---
 
-func fmtHMS(timeSecs float32) string {
-	timestamp := time.Duration(timeSecs * float32(time.Second))
-	return fmt.Sprintf("%02d:%02d:%02d", int(timestamp.Hours()), int(timestamp.Minutes())%60, int(timestamp.Seconds())%60)
-}
+func fmtHMS(timeSecs int64) string {
+	timestamp := time.Duration(timeSecs) * time.Second
 
-func formatSegment(segment Segment) string {
-	return fmt.Sprintf("[%s-%s]: %s", fmtHMS(segment.Start), fmtHMS(segment.End), segment.Text)
+	if timestamp > time.Hour {
+		return fmt.Sprintf("%02d:%02d:%02d", int(timestamp.Hours()), int(timestamp.Minutes())%60, int(timestamp.Seconds())%60)
+	} else {
+		return fmt.Sprintf("%02d:%02d", int(timestamp.Minutes())%60, int(timestamp.Seconds())%60)
+	}
 }
 
 // Takes in all the segments, and outputs a list of 30,000 token formatted timestamped chunks
@@ -57,7 +58,7 @@ func createTranscriptSegments(script []Segment) []string {
 	out := make([]string, 0)
 
 	for _, segment := range script {
-		currentString += formatSegment(segment) + "\n"
+		currentString += formatSubtitle(float64(segment.Start), float64(segment.End), segment.Text) + "\n"
 
 		// Assumes 4 chars per token average
 		if len(currentString) > MaxTokens*4 {
@@ -86,7 +87,7 @@ func extendSummary(newSection string, currentSummary string) (*string, error) {
 				Role:    "user",
 			},
 			{
-				Content: fmt.Sprintf("Here is the current summary. Extend it using the transcription I just gave you. If there is no current summary, just write the initial one: %s", currentSummary),
+				Content: fmt.Sprintf("Here is the current summary. Combine it with the transcription below to form a more complete summary. If there is no current summary, just write an initial one: %s", currentSummary),
 				Role:    "user",
 			},
 		},
@@ -127,7 +128,7 @@ func SummarizeVideo(videoID string, update func(func(j *job.SummaryJob))) error 
 
 	// Read transcription data
 
-	scribePath := fmt.Sprintf("%s/%s.%s", transcriptionsPath, videoID, "json")
+	scribePath := fmt.Sprintf("%s/%s.%s", TranscriptionsPath, videoID, "json")
 
 	scribeFile, err := os.Open(scribePath)
 	if err != nil {
@@ -171,9 +172,9 @@ func SummarizeVideo(videoID string, update func(func(j *job.SummaryJob))) error 
 
 	// Write out the finished summary
 
-	summaryPath := fmt.Sprintf("%s/%s.%s", summariesPath, videoID, "md")
+	summaryPath := fmt.Sprintf("%s/%s.%s", SummariesPath, videoID, "md")
 
-	if err := os.MkdirAll(summariesPath, os.ModePerm); err != nil {
+	if err := os.MkdirAll(SummariesPath, os.ModePerm); err != nil {
 		return err
 	}
 

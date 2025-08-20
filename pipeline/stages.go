@@ -6,8 +6,6 @@ import (
 
 	"go-yt-sum/adapters"
 	"go-yt-sum/job"
-
-	"github.com/lrstanley/go-ytdlp"
 )
 
 type PipelineError struct {
@@ -73,9 +71,12 @@ func (pipe *SummarizerPipeline) handleErrors() {
 		log.Printf("Job %s failed at stage %s: %s", pipeError.Job.VideoID, pipeError.Stage, pipeError.Err)
 
 		pipeError.Job.UpdateJob(func(j *job.SummaryJob) {
-      j.Status = "failed" 
+			j.Status = "failed"
 			j.Error = pipeError.Err.Error()
 		})
+
+		// Update database to mark job as failed
+		pipe.mgr.DB.SetJobFailed(pipeError.Job.VideoID, true, pipeError.Err.Error())
 	}
 }
 
@@ -94,7 +95,8 @@ func (pipe *SummarizerPipeline) processNewIds() {
 
 func (pipe *SummarizerPipeline) summarizeNextJob() {
 	for pendingJob := range pipe.transcribedCh {
-		func(job *job.SummaryJob) {
+		// Summaries can be generated in parallel since groq doesn't rate limit
+		go func(job *job.SummaryJob) {
 			defer pipe.recoverStage("summarizeNextJob", job)
 
 			log.Printf("Summarizing %s\n", job.VideoID)
@@ -133,28 +135,23 @@ func (pipe *SummarizerPipeline) downloadNextJob() {
 		func(j *job.SummaryJob) {
 			defer pipe.recoverStage("downloadNextJob", j)
 
+
 			log.Printf("Downloading %s\n", pendingJob.VideoID)
-			pendingJob.UpdateStatus("downloading")
-
-			// Define progress handler
-			onProgress := func(up ytdlp.ProgressUpdate) {
-				j.UpdateJob(func(j *job.SummaryJob) {
-					j.Progress.PercentageString = up.PercentString()
-
-					if up.Status == "finished" {
-						j.Status = "extracting_audio"
-					}
-				})
-			}
 
 			// Call the adapter to perform the IO
-			err := adapters.DownloadVideo(j.VideoID, onProgress)
+			autoSubsWereAvailable, err := adapters.DownloadVideo(j.VideoID, pendingJob.UpdateJob)
+
 			if err != nil {
 				panic(err)
 			}
 
-			// Hand off
-			pipe.downloadedCh <- pendingJob
+			// If auto-generated subs were available, send straight to summarization stage
+			// Otherwise, manually transcribe
+			if autoSubsWereAvailable {
+				pipe.transcribedCh <- pendingJob
+			} else {
+				pipe.downloadedCh <- pendingJob
+			}
 		}(pendingJob)
 	}
 }
@@ -163,8 +160,11 @@ func (pipe *SummarizerPipeline) displayOutput() {
 	for j := range pipe.summarizedCh {
 		log.Printf("All steps completed succesfully for job %s\n", j.VideoID)
 
-		j.UpdateJob(func (j *job.SummaryJob) {
-      j.Status = "finished"
+		j.UpdateJob(func(j *job.SummaryJob) {
+			j.Status = "finished"
 		})
+
+		// Update database to mark job as successful
+		pipe.mgr.DB.UpdateJobSuccess(j.VideoID)
 	}
 }

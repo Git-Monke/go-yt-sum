@@ -1,16 +1,19 @@
 package job
 
 import (
+	"go-yt-sum/db"
 	"sync"
 )
 
 // ---
 
 type JobProgress struct {
+	VideoMeta        *db.VideoEntry
 	PercentageString string `json:"percentage_string"`
 
-	TranscriptionChunks int `json:"transcription_chunks"`
-	ChunksTranscribed   int `json:"transcription_chunks_transcribed"`
+	HadCaptions         bool `json:"had_captions"`
+	TranscriptionChunks int  `json:"transcription_chunks"`
+	ChunksTranscribed   int  `json:"transcription_chunks_transcribed"`
 
 	SummaryChunks    int `json:"summary_chunks"`
 	ChunksSummarized int `json:"summary_chunks_transcribed"`

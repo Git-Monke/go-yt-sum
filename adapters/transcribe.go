@@ -16,25 +16,19 @@ import (
 	"io"
 )
 
-type Segment struct {
-	Start float32 `json:"start"`
-	End   float32 `json:"end"`
-	Text  string  `json:"text"`
-}
-
 type TranscriptionPayload struct {
 	Segments []Segment `json:"segments"`
 }
 
 func cleanUpChunks(videoID string) {
-	chunksPath := fmt.Sprintf("%s/%s/", downloadsPath, videoID)
+	chunksPath := fmt.Sprintf("%s/%s/", DownloadsPath, videoID)
 	os.RemoveAll(chunksPath)
 }
 
 // Takes mp3, chunks it, returns a list of the relative paths of all the chunk files. Good for iterating over once the function has been called
 func chunkAudio(videoID string) (*[]string, error) {
-	dlPath := fmt.Sprintf("%s/%s.%s", downloadsPath, videoID, audioType)
-	outputPath := fmt.Sprintf("%s/%s", downloadsPath, videoID)
+	dlPath := fmt.Sprintf("%s/%s.%s", DownloadsPath, videoID, audioType)
+	outputPath := fmt.Sprintf("%s/%s", DownloadsPath, videoID)
 
 	if err := os.MkdirAll(outputPath, os.ModePerm); err != nil {
 		return nil, err
@@ -135,7 +129,7 @@ func transcribeFile(filePath string, context string) (*TranscriptionPayload, err
 // The purpose of keeping it abstract is so if that logic changes (it likely will), this logic stays the same
 func TranscribeVideo(videoID string, progress func(func(j *job.SummaryJob))) error {
 	// Check for existing transcription
-	scribePath := fmt.Sprintf("%s/%s.%s", transcriptionsPath, videoID, "json")
+	scribePath := fmt.Sprintf("%s/%s.%s", TranscriptionsPath, videoID, "json")
 	_, err := os.Stat(scribePath)
 
 	if err == nil {
@@ -144,7 +138,7 @@ func TranscribeVideo(videoID string, progress func(func(j *job.SummaryJob))) err
 	}
 
 	// Chunk it up
-  progress(func (j *job.SummaryJob) {
+	progress(func(j *job.SummaryJob) {
 		j.Status = "chunking"
 	})
 
@@ -155,39 +149,45 @@ func TranscribeVideo(videoID string, progress func(func(j *job.SummaryJob))) err
 		return err
 	}
 
-  progress(func (j *job.SummaryJob) {
+	progress(func(j *job.SummaryJob) {
 		j.Status = "transcribing"
-		j.Progress.TranscriptionChunks = len(*entries) 
+		j.Progress.TranscriptionChunks = len(*entries)
 	})
 
 	// Transcribe each segment
 	segments := make([]Segment, 0)
-	var lastTimestamp float32 = 0.0
+	var lastTimestamp float64 = 0
 
 	for i, entry := range *entries {
 		newTranscription, err := transcribeFile(entry, "")
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 
 		for i := range newTranscription.Segments {
-      newTranscription.Segments[i].Start += lastTimestamp			
+			newTranscription.Segments[i].Start += lastTimestamp
 			newTranscription.Segments[i].End += lastTimestamp
 		}
 
-		progress(func (j *job.SummaryJob) {
+		progress(func(j *job.SummaryJob) {
 			j.Progress.ChunksTranscribed = i + 1
 		})
 
-	  segments = append(segments, newTranscription.Segments...)	
-    // Each transcription chunk is 1200 seconds long, so we can increment by a fixed amount safely
+		segments = append(segments, newTranscription.Segments...)
+		// Each transcription chunk is 1200 seconds long, so we can increment by a fixed amount safely
 		lastTimestamp += 1200
 	}
 
 	// Write output
-  outputFile, err := os.Create(scribePath)
-	if err != nil { return err }
+	outputFile, err := os.Create(scribePath)
+	if err != nil {
+		return err
+	}
 
 	encoder := json.NewEncoder(outputFile)
-  if err := encoder.Encode(segments); err != nil { return err }
+	if err := encoder.Encode(segments); err != nil {
+		return err
+	}
 
 	return nil
 }
