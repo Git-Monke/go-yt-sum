@@ -1,8 +1,7 @@
 version: "3.9"
-
 services:
   backend:
-    image: gitmonke/go-yt-sum-b:latest
+    build: ./backend
     ports:
       - "3211:3211"
     volumes:
@@ -10,6 +9,8 @@ services:
       - ./content:/app/content
 
   frontend:
-    image: gitmonke/go-yt-sum-f:latest
+    build:
+      context: ./frontend
+      target: prod          # nginx static serve
     ports:
       - "3210:80"
