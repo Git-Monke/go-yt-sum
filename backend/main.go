@@ -114,7 +114,7 @@ func getChatHistory(w http.ResponseWriter, r *http.Request) {
 	var data []byte
 
 	if _, err := os.Stat(chatPath); os.IsNotExist(err) {
-    data = []byte("[]") 
+		data = []byte("[]")
 	} else {
 		data, err = os.ReadFile(chatPath)
 		if err != nil {
@@ -210,7 +210,7 @@ func loadRequiredEnvVars() (string, string) {
 func main() {
 	log.Println("Loading environment variables")
 	ytdlpBin, groqAPIKey := loadRequiredEnvVars()
-	
+
 	// Initialize adapters with environment variables
 	adapters.Init(ytdlpBin, groqAPIKey)
 
@@ -257,8 +257,8 @@ func main() {
 	r.HandleFunc("/chat/{videoID}/subscribe", createChatSSEClient(chatMgr)).Methods("GET")
 
 	handler := c.Handler(r)
-	log.Println("Serving on port 8010!")
-	if err := http.ListenAndServe(":8010", handler); err != nil {
+	log.Println("Serving on port 3211!")
+	if err := http.ListenAndServe(":3211", handler); err != nil {
 		log.Fatal(err)
 	}
 }

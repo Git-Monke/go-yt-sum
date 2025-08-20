@@ -1,4 +1,3 @@
-run:
-	gofmt -s -w .
-	go vet ./...
-	go run *.go
+docker-build-backend:
+	cd backend
+	docker build -t git-monke/go-yt-sum-b:latest .

@@ -32,36 +32,36 @@ type GroqStreamResponse struct {
 
 func loadSummary(videoID string) (string, error) {
 	summaryPath := fmt.Sprintf("%s/%s.md", SummariesPath, videoID)
-	
+
 	if _, err := os.Stat(summaryPath); os.IsNotExist(err) {
 		return "", nil // No summary available
 	}
-	
+
 	data, err := os.ReadFile(summaryPath)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return string(data), nil
 }
 
 func loadChatHistory(videoID string) ([]ChatMessage, error) {
 	chatPath := fmt.Sprintf("./content/chats/%s.json", videoID)
-	
+
 	if _, err := os.Stat(chatPath); os.IsNotExist(err) {
 		return []ChatMessage{}, nil
 	}
-	
+
 	data, err := os.ReadFile(chatPath)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var history []ChatMessage
 	if err := json.Unmarshal(data, &history); err != nil {
 		return nil, err
 	}
-	
+
 	return history, nil
 }
 
@@ -71,13 +71,13 @@ func SendChatMessage(ctx context.Context, videoID, message string, onProgress fu
 	if err != nil {
 		return err
 	}
-	
+
 	// Load summary
 	summary, err := loadSummary(videoID)
 	if err != nil {
 		return err
 	}
-	
+
 	// Build complete message context
 	messages := []ChatMessage{
 		{
@@ -85,7 +85,7 @@ func SendChatMessage(ctx context.Context, videoID, message string, onProgress fu
 			Role:    "system",
 		},
 	}
-	
+
 	// Add summary context if available
 	if summary != "" {
 		messages = append(messages, ChatMessage{
@@ -93,10 +93,10 @@ func SendChatMessage(ctx context.Context, videoID, message string, onProgress fu
 			Role:    "system",
 		})
 	}
-	
+
 	// Add chat history
 	messages = append(messages, history...)
-	
+
 	// Add new user message
 	messages = append(messages, ChatMessage{
 		Content: message,
@@ -137,25 +137,25 @@ func SendChatMessage(ctx context.Context, videoID, message string, onProgress fu
 			return ctx.Err()
 		default:
 			line := scanner.Text()
-			
+
 			// Skip empty lines and non-data lines
 			if !strings.HasPrefix(line, "data: ") {
 				continue
 			}
-			
+
 			// Check for stream termination
 			if strings.Contains(line, "[DONE]") {
 				break
 			}
-			
+
 			// Extract JSON from data line
 			jsonData := strings.TrimPrefix(line, "data: ")
-			
+
 			var streamResp GroqStreamResponse
 			if err := json.Unmarshal([]byte(jsonData), &streamResp); err != nil {
 				continue // Skip malformed chunks
 			}
-			
+
 			// Extract content and call progress callback
 			if len(streamResp.Choices) > 0 && streamResp.Choices[0].Delta.Content != "" {
 				onProgress(streamResp.Choices[0].Delta.Content)

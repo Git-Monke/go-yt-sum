@@ -104,11 +104,16 @@ func formatVTT(path, videoID string) error {
 		})
 	}
 
-	out, err := os.Create(fmt.Sprintf("%s/%s.json", TranscriptionsPath, videoID))
-	encoder := json.NewEncoder(out)
 
-	if err := encoder.Encode(segments); err != nil {
-		return err
+	outPath := fmt.Sprintf("%s/%s.json", TranscriptionsPath, videoID)
+
+	if  err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+		return fmt.Errorf("mkdir err")
+	}
+
+	data, err := json.Marshal(segments)
+	if err := os.WriteFile(outPath, data, 0o644); err != nil {
+		return fmt.Errorf("write file err")
 	}
 
 	if err = os.Remove(path); err != nil {
@@ -161,14 +166,13 @@ func DownloadVideo(videoID string, progress func(func(j *job.SummaryJob))) (bool
 		Quiet().
 		WriteInfoJSON().
 		LimitRate("1M").
-		Impersonate("Chrome-100").
+		Impersonate("chrome").
 		SetExecutable(ytdlpBinPath)
 
-
-		_, err := dl.Run(context.Background(), fmt.Sprintf("https://www.youtube.com/watch?v=%s", videoID))
+	_, err := dl.Run(context.Background(), fmt.Sprintf("https://www.youtube.com/watch?v=%s", videoID))
 
 	if err != nil {
-	  return false, err
+		return false, err
 	}
 
 	rawPath, err := findFirstByVideoID(DownloadsPath, videoID)
@@ -178,7 +182,7 @@ func DownloadVideo(videoID string, progress func(func(j *job.SummaryJob))) (bool
 	}
 
 	if rawPath == "" {
-	  return false, fmt.Errorf("Captions should have been available")
+		return false, fmt.Errorf("Captions should have been available")
 	}
 
 	// If auto-generated transcriptions aren't available, download and extract audio then send to transcriber stage

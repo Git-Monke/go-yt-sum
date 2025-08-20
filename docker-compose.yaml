@@ -1,0 +1,16 @@
+version: "3.9"
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "3211:3211"
+    volumes:
+      - ./.env.docker:/app/.env:ro
+      - ./content:/app/content
+
+  frontend:
+    build:
+      context: ./frontend
+      target: prod          # nginx static serve
+    ports:
+      - "3210:80"

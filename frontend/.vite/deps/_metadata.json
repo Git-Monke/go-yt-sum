@@ -2,7 +2,39 @@
   "hash": "d21cf283",
   "configHash": "c47b4d51",
   "lockfileHash": "33cd97a8",
-  "browserHash": "0d6bfe09",
-  "optimized": {},
-  "chunks": {}
+  "browserHash": "6632e969",
+  "optimized": {
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "6b98c04c",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "a781447d",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "dd9f765b",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.mjs",
+      "file": "react-router-dom.js",
+      "fileHash": "947c8de0",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-4J6BLW67": {
+      "file": "chunk-4J6BLW67.js"
+    },
+    "chunk-WYQRYOQT": {
+      "file": "chunk-WYQRYOQT.js"
+    }
+  }
 }

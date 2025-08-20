@@ -3,7 +3,7 @@ import type { SummaryJob, SSEMessage, SSEInitMessage, SSENewMessage, SSEUpdateMe
 
 // Configuration constants
 const SSE_ENDPOINT = '/summarize/jobs/subscribe';
-const BASE_URL = 'http://localhost:8010'; // TODO: Use environment variable
+const BASE_URL = `http://${window.location.hostname}:3211`;
 const INITIAL_RETRY_DELAY = 1000; // 1 second
 const MAX_RETRY_DELAY = 30000; // 30 seconds
 const MAX_RETRY_ATTEMPTS = 10;

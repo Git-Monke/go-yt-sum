@@ -8,3 +8,4 @@ go-yt-sum-req
 .claude
 .env
 .serena
+.env.docker

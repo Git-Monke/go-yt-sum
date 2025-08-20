@@ -6,7 +6,7 @@ var (
 
 	transcriptionModel = "whisper-large-v3-turbo"
 	summarizationModel = "openai/gpt-oss-120b"
-	chatModel = "moonshotai/kimi-k2-instruct"
+	chatModel          = "moonshotai/kimi-k2-instruct"
 
 	DownloadsPath      = "./content/downloads"
 	TranscriptionsPath = "./content/transcriptions"

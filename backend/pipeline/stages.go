@@ -135,7 +135,6 @@ func (pipe *SummarizerPipeline) downloadNextJob() {
 		func(j *job.SummaryJob) {
 			defer pipe.recoverStage("downloadNextJob", j)
 
-
 			log.Printf("Downloading %s\n", pendingJob.VideoID)
 
 			// Call the adapter to perform the IO

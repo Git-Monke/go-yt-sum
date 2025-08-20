@@ -1,6 +1,11 @@
 // API utilities for backend integration
 
-const API_BASE_URL = 'http://localhost:8010'; // TODO: Use environment variable
+// Dynamic base URL function that adapts to current domain
+function getAPIBaseURL(): string {
+  return `http://${window.location.hostname}:3211`;
+}
+
+const API_BASE_URL = getAPIBaseURL();
 
 // API response types
 export interface SummaryJobResponse {

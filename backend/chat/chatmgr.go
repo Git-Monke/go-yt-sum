@@ -125,16 +125,16 @@ func (mgr *ChatManager) SendMessage(videoID string, message string) error {
 		defer func() {
 			// First broadcast completion signal
 			mgr.broadcastComplete(videoID)
-			
+
 			// Save chat history before clearing state
 			chat.mu.Lock()
 			finalResponse := chat.InProgressResponse
 			chat.mu.Unlock()
-			
+
 			if finalResponse != "" {
 				mgr.saveChatHistory(videoID, message, finalResponse)
 			}
-			
+
 			// Then clear state and broadcast final update
 			chat.mu.Lock()
 			chat.IsBusy = false
@@ -194,7 +194,7 @@ func (mgr *ChatManager) broadcastUpdate(videoID string) {
 
 func (mgr *ChatManager) broadcastComplete(videoID string) {
 	eventString := "event: complete\ndata: {}\n\n"
-	
+
 	mgr.mu.Lock()
 	for _, client := range mgr.Clients {
 		if client.ListeningTo == videoID {
@@ -207,21 +207,21 @@ func (mgr *ChatManager) broadcastComplete(videoID string) {
 
 func (mgr *ChatManager) loadChatHistory(videoID string) ([]Message, error) {
 	chatPath := fmt.Sprintf("./content/chats/%s.json", videoID)
-	
+
 	if _, err := os.Stat(chatPath); os.IsNotExist(err) {
 		return []Message{}, nil
 	}
-	
+
 	data, err := os.ReadFile(chatPath)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var history []Message
 	if err := json.Unmarshal(data, &history); err != nil {
 		return nil, err
 	}
-	
+
 	return history, nil
 }
 
@@ -230,23 +230,23 @@ func (mgr *ChatManager) saveChatHistory(videoID, userMessage, assistantResponse 
 	if err != nil {
 		return err
 	}
-	
+
 	// Append user message and assistant response
-	history = append(history, 
+	history = append(history,
 		Message{Content: userMessage, Role: "user"},
 		Message{Content: assistantResponse, Role: "assistant"},
 	)
-	
+
 	chatPath := fmt.Sprintf("./content/chats/%s.json", videoID)
-	
+
 	if err := os.MkdirAll("./content/chats", os.ModePerm); err != nil {
 		return err
 	}
-	
+
 	data, err := json.MarshalIndent(history, "", "  ")
 	if err != nil {
 		return err
 	}
-	
+
 	return os.WriteFile(chatPath, data, 0644)
 }

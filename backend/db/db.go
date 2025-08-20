@@ -28,41 +28,37 @@ type DB struct {
 }
 
 func NewDB(dbPath string) (*DB, error) {
-	_, err := os.Stat(dbPath)
-
-	// If the db doesn't exist, just fill it
-	if err != nil {
-		if err := os.MkdirAll(dbPath, os.ModePerm); err != nil {
-			return nil, err
-		}
-
-		initalDB, err := os.Create(filepath.Base(dbPath))
-		if err != nil {
-			return nil, err
-		}
-
-		initalDB.Write([]byte("{}"))
-		initalDB.Close()
+	// Ensure the directory exists.
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		return nil, err
 	}
 
-	// Now that it is guaranteed to exist, we can just read and unmarshal in a standardized way
-	rawData, err := os.ReadFile(dbPath)
+	// If file missing, create seed file atomically.
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		if err := os.WriteFile(dbPath, []byte("{}"), 0o644); err != nil {
+			return nil, err
+		}
+	}
 
+	// Read & unmarshal.
+	data, err := os.ReadFile(dbPath)
 	if err != nil {
 		return nil, err
 	}
 
-	var initialData DB
-	if err = json.Unmarshal(rawData, &initialData); err != nil {
+	var db DB
+	if err := json.Unmarshal(data, &db); err != nil {
 		return nil, err
 	}
 
-	db := &DB{
-		Data:     initialData.Data,
+	if db.Data == nil {
+		db.Data = make(map[string]VideoEntry)
+	}
+
+	return &DB{
+		Data:     db.Data,
 		FilePath: dbPath,
-	}
-
-	return db, nil
+	}, nil
 }
 
 func (db *DB) Delete(VideoID string) {
@@ -152,7 +148,7 @@ func (db *DB) SaveToFile() {
 // SetJobFailed sets the job failure state for a video
 func (db *DB) SetJobFailed(videoID string, failed bool, errorMsg string) {
 	db.Lock.Lock()
-	
+
 	if entry, exists := db.Data[videoID]; exists {
 		entry.JobFailed = failed
 		entry.LastError = errorMsg

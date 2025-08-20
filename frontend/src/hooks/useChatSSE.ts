@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import type { ChatSSEMessage, ChatSSEData, ChatSSEState } from '@/types/chat';
 
 // Configuration constants
-const BASE_URL = 'http://localhost:8010';
+const BASE_URL = `http://${window.location.hostname}:3211`;
 const INITIAL_RETRY_DELAY = 1000; // 1 second
 const MAX_RETRY_DELAY = 30000; // 30 seconds
 const MAX_RETRY_ATTEMPTS = 10;
