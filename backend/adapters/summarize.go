@@ -91,7 +91,7 @@ func extendSummary(newSection string, currentSummary string) (*string, error) {
 				Role:    "user",
 			},
 		},
-		Model: summarizationModel,
+		Model: GetSummarizationModel(),
 	}
 
 	writer := json.NewEncoder(reqBody)

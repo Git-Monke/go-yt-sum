@@ -89,7 +89,7 @@ func transcribeFile(filePath string, context string) (*TranscriptionPayload, err
 	_, err = io.Copy(part, audioFile)
 
 	// Write other fields
-	err = writer.WriteField("model", transcriptionModel)
+	err = writer.WriteField("model", GetTranscriptionModel())
 	err = writer.WriteField("language", "en")
 	err = writer.WriteField("response_format", "verbose_json")
 	err = writer.WriteField("prompt", context)

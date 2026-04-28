@@ -106,7 +106,7 @@ func SendChatMessage(ctx context.Context, videoID, message string, onProgress fu
 	reqBody := &bytes.Buffer{}
 	reqData := GroqChatRequest{
 		Messages: messages,
-		Model:    chatModel,
+		Model:    GetChatModel(),
 		Stream:   true,
 	}
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"go-yt-sum/db"
 	"go-yt-sum/job"
 	"go-yt-sum/pipeline"
+	"go-yt-sum/settings"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -207,12 +209,65 @@ func loadRequiredEnvVars() (string, string) {
 	return ytdlpBin, groqAPIKey
 }
 
+func constructGetModelsHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		req, err := http.NewRequest("GET", adapters.GetModelsURL(), nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", adapters.GetAPIKey()))
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer resp.Body.Close()
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}
+}
+
+func constructGetSettingsHandler(sm *settings.SettingsManager) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, sm.GetSettings())
+	}
+}
+
+func constructUpdateSettingsHandler(sm *settings.SettingsManager) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var s settings.Settings
+		if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if err := sm.UpdateSettings(s); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		writeJSON(w, http.StatusOK, sm.GetSettings())
+	}
+}
+
 func main() {
 	log.Println("Loading environment variables")
 	ytdlpBin, groqAPIKey := loadRequiredEnvVars()
 
-	// Initialize adapters with environment variables
-	adapters.Init(ytdlpBin, groqAPIKey)
+	log.Println("Initializing settings manager")
+	sm, err := settings.NewSettingsManager("./content/settings.json")
+	if err != nil {
+		log.Fatalf("Failed to initialize settings manager: %s", err.Error())
+	}
+
+	// Initialize adapters with environment variables and settings manager
+	adapters.Init(ytdlpBin, groqAPIKey, sm)
 
 	r := mux.NewRouter()
 
@@ -255,6 +310,11 @@ func main() {
 	r.HandleFunc("/chat/{videoID}", getChatHistory).Methods("GET")
 	r.HandleFunc("/chat/{videoID}/send", constructSendChatHandler(chatMgr)).Methods("POST")
 	r.HandleFunc("/chat/{videoID}/subscribe", createChatSSEClient(chatMgr)).Methods("GET")
+
+	// Settings and models
+	r.HandleFunc("/api/models", constructGetModelsHandler()).Methods("GET")
+	r.HandleFunc("/api/settings", constructGetSettingsHandler(sm)).Methods("GET")
+	r.HandleFunc("/api/settings", constructUpdateSettingsHandler(sm)).Methods("POST")
 
 	handler := c.Handler(r)
 	log.Println("Serving on port 3211!")

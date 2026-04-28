@@ -232,3 +232,39 @@ export async function sendChatMessage(videoId: string, message: string): Promise
     body: JSON.stringify({ message: message.trim() }),
   });
 }
+
+export interface Settings {
+  summarizationModel: string;
+  chatModel: string;
+  transcriptionModel: string;
+}
+
+export interface GroqModel {
+  id: string;
+  object: string;
+  created: number;
+  owned_by: string;
+}
+
+export interface GroqModelsResponse {
+  data: GroqModel[];
+}
+
+export async function getSettings(): Promise<Settings> {
+  return apiRequest<Settings>('/api/settings', {
+    method: 'GET',
+  });
+}
+
+export async function updateSettings(settings: Settings): Promise<Settings> {
+  return apiRequest<Settings>('/api/settings', {
+    method: 'POST',
+    body: JSON.stringify(settings),
+  });
+}
+
+export async function getAvailableModels(): Promise<GroqModelsResponse> {
+  return apiRequest<GroqModelsResponse>('/api/models', {
+    method: 'GET',
+  });
+}
